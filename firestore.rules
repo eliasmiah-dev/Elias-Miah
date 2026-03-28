@@ -1,0 +1,105 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (matches Firebase Auth UID)
+    // Fields:
+    //   - uid: string (required, immutable) - Firebase Auth UID
+    //   - email: string (required, immutable) - User's email
+    //   - displayName: string (optional) - User's name
+    //   - role: string (required, enum: ['admin', 'manager', 'staff']) - User's role
+    //   - createdAt: timestamp (required, immutable) - Creation time
+    //   - updatedAt: timestamp (required) - Last update time
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        (request.auth.token.email == "elias.headgear@gmail.com" && request.auth.token.email_verified == true) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isManager() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager';
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.role in ['admin', 'manager', 'staff'];
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function emailUnchanged() {
+      return !('email' in request.resource.data) || request.resource.data.email == resource.data.email;
+    }
+
+    function isPreAuthorized(email, role) {
+      return exists(/databases/$(database)/documents/users/$(email)) && 
+             get(/databases/$(database)/documents/users/$(email)).data.role == role;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{docId} {
+      // Users can read themselves (by UID or Email). Admins/Managers can read all.
+      allow read: if isAuthenticated() && (
+        isOwner(docId) || 
+        (request.auth.token.email == docId) ||
+        isAdmin() || 
+        isManager()
+      );
+      
+      // Only admins can create or update users (except for initial self-creation if pre-authorized)
+      allow create: if isAuthenticated() && isOwner(docId) && isValidUser(request.resource.data) && (
+        isAdmin() || 
+        (request.auth.token.email == "elias.headgear@gmail.com") ||
+        isPreAuthorized(request.auth.token.email, request.resource.data.role)
+      );
+      
+      // Only admins can update roles. Users can update their own displayName.
+      allow update: if isAuthenticated() && (
+        (isAdmin() && isValidUser(request.resource.data) && uidUnchanged() && emailUnchanged()) ||
+        (isOwner(docId) && 
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'updatedAt']) &&
+         uidUnchanged() && emailUnchanged())
+      );
+      
+      // Only admins can delete users, or users can delete their own email-based pre-auth doc.
+      allow delete: if isAdmin() || (isAuthenticated() && request.auth.token.email == docId);
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

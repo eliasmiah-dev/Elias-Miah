@@ -1,10 +1,11 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, Component } from 'react';
 import { 
   Smartphone, 
   Calculator, 
   Calendar as CalendarIcon, 
   Printer, 
   Download, 
+  Upload,
   Languages, 
   ChevronRight, 
   CreditCard,
@@ -15,13 +16,25 @@ import {
   Phone,
   MapPin,
   Bell,
-  Mail
+  Mail,
+  Plus,
+  Minus,
+  LogOut,
+  LogIn,
+  Settings,
+  Shield,
+  LayoutDashboard
 } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import { domToCanvas } from 'modern-screenshot';
 import { cn } from './lib/utils';
+import { AuthProvider, useAuth } from './auth/AuthContext';
+import { Login } from './components/auth/Login';
+import { AdminPanel } from './components/admin/AdminPanel';
+import { auth } from './firebase';
+import { signOut } from 'firebase/auth';
 
 // --- Types & Constants ---
 
@@ -97,6 +110,8 @@ const translations = {
     sendReminder: "Send Reminder",
     reminderSent: "Reminder Sent!",
     installApp: "Install App",
+    imeiNumber: "IMEI Number",
+    customerAddress: "Customer Address",
   },
   bn: {
     title: "Phone Future - EMI System",
@@ -152,6 +167,8 @@ const translations = {
     sendReminder: "রিমাইন্ডার পাঠান",
     reminderSent: "রিমাইন্ডার পাঠানো হয়েছে!",
     installApp: "অ্যাপ ইনস্টল করুন",
+    imeiNumber: "আইএমইআই নম্বর",
+    customerAddress: "গ্রাহকের ঠিকানা",
   }
 };
 
@@ -169,6 +186,8 @@ interface PrintSlipProps {
   serviceCharge: number;
   currentPlanData: any;
   activePlan: number;
+  imeiNumber: string;
+  customerAddress: string;
 }
 
 const SingleSlip = ({ 
@@ -182,10 +201,12 @@ const SingleSlip = ({
   phonePrice, 
   serviceCharge, 
   currentPlanData, 
-  activePlan
+  activePlan,
+  imeiNumber,
+  customerAddress
 }: Omit<PrintSlipProps, 'ref'>) => (
-  <div className="flex flex-col bg-white min-h-[297mm] p-6">
-    <div className="border-8 border-double border-slate-900 p-8 flex-grow flex flex-col relative overflow-hidden">
+  <div className="flex flex-col bg-white min-h-[1123px] p-6">
+    <div className="border-8 border-double border-slate-900 p-8 flex-grow flex flex-col relative">
       {/* Watermarks */}
       {shopLogo && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] z-0">
@@ -206,20 +227,13 @@ const SingleSlip = ({
         {/* Header */}
         <div className="flex justify-between items-start mb-10 pb-6 border-b-2 border-slate-900">
           <div className="flex items-center gap-4">
-            {shopLogo ? (
-              <div className="w-20 h-20 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
-                <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="w-20 h-20 bg-[#0052CC] rounded-lg flex items-center justify-center text-white overflow-hidden relative shadow-sm">
-                <svg viewBox="0 0 40 40" className="w-16 h-16">
-                  <rect width="40" height="40" rx="8" fill="#0052CC" />
-                  <path d="M12 8H28C29.1046 8 30 8.89543 30 10V30C30 31.1046 29.1046 32 28 32H12C10.8954 32 10 31.1046 10 30V10C10 8.89543 10.8954 8 12 8Z" stroke="#FF8A00" strokeWidth="2" fill="none" />
-                  <path d="M22 28H18" stroke="#FF8A00" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M15 15L20 20L32 8" stroke="#00C853" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-sm" />
-                </svg>
-              </div>
-            )}
+            <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200 overflow-hidden">
+              {shopLogo ? (
+                <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                <LogIn className="w-10 h-10" />
+              )}
+            </div>
             <div>
               <h1 className="text-5xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-1">Phone Future</h1>
               <div className="flex flex-col">
@@ -257,6 +271,8 @@ const SingleSlip = ({
                 <p className="text-md font-bold text-slate-900">{customerPhone || 'N/A'}</p>
                 <p className="text-sm font-black text-slate-900 uppercase mt-2">{t.customerNID}</p>
                 <p className="text-md font-bold text-slate-900">{customerNID || 'N/A'}</p>
+                <p className="text-sm font-black text-slate-900 uppercase mt-2">{t.customerAddress}</p>
+                <p className="text-md font-bold text-slate-900">{customerAddress || 'N/A'}</p>
               </div>
             </div>
             <div className="mt-4 border-b-4 border-double border-slate-900 w-full"></div>
@@ -281,6 +297,10 @@ const SingleSlip = ({
               <div className="flex justify-between border-b border-slate-100 pb-1">
                 <span className="text-[10px] font-black text-slate-900 uppercase">{t.mobileModel}</span>
                 <span className="text-sm font-black text-slate-900">{mobileModel || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-100 pb-1">
+                <span className="text-[10px] font-black text-slate-900 uppercase">{t.imeiNumber}</span>
+                <span className="text-sm font-black text-slate-900">{imeiNumber || 'N/A'}</span>
               </div>
               <div className="flex justify-between border-b border-slate-100 pb-1">
                 <span className="text-[10px] font-black text-slate-900 uppercase">{t.phonePrice}</span>
@@ -369,12 +389,188 @@ const SingleSlip = ({
 );
 
 const PrintSlip = React.forwardRef<HTMLDivElement, PrintSlipProps>((props, ref) => (
-  <div ref={ref} className="bg-white w-[210mm] text-slate-900 font-sans p-0">
+  <div ref={ref} id="print-content" className="bg-white w-[794px] text-slate-900 font-sans p-0">
     <SingleSlip {...props} />
   </div>
 ));
 
+// Error Boundary Component
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: any;
+}
+
+class ErrorBoundary extends Component<any, any> {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      let errorDetails = null;
+      try {
+        errorDetails = JSON.parse(this.state.error.message);
+      } catch (e) {
+        // Not a JSON error
+      }
+
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-red-100">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-6 mx-auto">
+              <Shield className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter text-center mb-4">System Error</h2>
+            <p className="text-slate-600 text-center mb-6 font-medium">
+              {errorDetails ? "A security or permission error occurred. Please contact your administrator." : "An unexpected error occurred. Please refresh the page."}
+            </p>
+            {errorDetails && (
+              <div className="bg-slate-50 rounded-xl p-4 mb-6 overflow-auto max-h-40">
+                <p className="text-[10px] font-mono text-slate-500 break-all">
+                  Operation: {errorDetails.operationType}<br/>
+                  Path: {errorDetails.path}<br/>
+                  Error: {errorDetails.error}
+                </p>
+              </div>
+            )}
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-3 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-200"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (this as any).props.children;
+  }
+}
+
 export default function App() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <MainApp />
+      </AuthProvider>
+    </ErrorBoundary>
+  );
+}
+
+function MainApp() {
+  const { user: authUser, loading: authLoading, profile: authProfile, isAdmin: authIsAdmin, isManager: authIsManager } = useAuth();
+  const [currentView, setCurrentView] = useState<'dashboard' | 'admin'>('dashboard');
+  const [shopLogo, setShopLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedLogo = localStorage.getItem('shopLogo');
+    if (savedLogo) setShopLogo(savedLogo);
+  }, []);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string | null) => void) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setter(result);
+        if (setter === setShopLogo) {
+          localStorage.setItem('shopLogo', result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Mock profile for direct access
+  const mockProfile = {
+    uid: 'guest',
+    email: 'admin@phonefuture.com',
+    displayName: 'Admin User',
+    role: 'admin' as const,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const profile = authProfile || mockProfile;
+  const isAdmin = profile.role === 'admin';
+  const isManager = profile.role === 'manager';
+  const loading = false; // Force loading to false for direct access
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {currentView === 'dashboard' ? (
+        <Dashboard 
+          onNavigateAdmin={() => setCurrentView('admin')} 
+          forcedProfile={profile} 
+          shopLogo={shopLogo}
+          onLogoUpload={(e) => handleImageUpload(e, setShopLogo)}
+        />
+      ) : (
+        <div className="no-print">
+          <header className="bg-white border-b border-slate-200">
+            <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+              <button 
+                onClick={() => setCurrentView('dashboard')}
+                className="flex items-center gap-2 text-slate-600 hover:text-blue-600 transition-colors font-bold uppercase text-xs"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                Back to Dashboard
+              </button>
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                  {isAdmin ? 'Admin Mode' : 'Manager Mode'}
+                </span>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                  title="Reset"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </header>
+          <AdminPanel 
+            shopLogo={shopLogo} 
+            onLogoUpload={(e) => handleImageUpload(e, setShopLogo)}
+            onLogoRemove={() => {
+              setShopLogo(null);
+              localStorage.removeItem('shopLogo');
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Dashboard({ 
+  onNavigateAdmin, 
+  forcedProfile, 
+  shopLogo,
+  onLogoUpload
+}: { 
+  onNavigateAdmin: () => void, 
+  forcedProfile?: any, 
+  shopLogo: string | null,
+  onLogoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
+}) {
+  const { profile: authProfile, isAdmin: authIsAdmin, isManager: authIsManager } = useAuth();
+  const profile = forcedProfile || authProfile;
+  const isAdmin = profile?.role === 'admin';
+  const isManager = profile?.role === 'manager';
   const [lang, setLang] = useState<Language>('en');
   const [serviceCharge, setServiceCharge] = useState<number>(300);
   const [phonePrice, setPhonePrice] = useState<number>(0);
@@ -384,16 +580,12 @@ export default function App() {
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   
   // New Fields
-  const [shopLogo, setShopLogo] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('shopLogo');
-    }
-    return null;
-  });
   const [customerName, setCustomerName] = useState<string>('');
   const [customerPhone, setCustomerPhone] = useState<string>('');
   const [customerNID, setCustomerNID] = useState<string>('');
+  const [customerAddress, setCustomerAddress] = useState<string>('');
   const [mobileModel, setMobileModel] = useState<string>('');
+  const [imeiNumber, setImeiNumber] = useState<string>('');
   const [invoiceNumber, setInvoiceNumber] = useState<string>(`INV-${Math.floor(1000 + Math.random() * 9000)}`);
   const [reminderEmail, setReminderEmail] = useState<string>('');
   const [reminderPhone, setReminderPhone] = useState<string>('');
@@ -430,21 +622,7 @@ export default function App() {
 
   const t = translations[lang];
   const slipRef = useRef<HTMLDivElement>(null);
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string | null) => void) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setter(result);
-        if (setter === setShopLogo) {
-          localStorage.setItem('shopLogo', result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Calculations
   const calculations = useMemo(() => {
@@ -483,22 +661,153 @@ export default function App() {
     setShowPrintPreview(true);
   };
 
-  const confirmPrint = () => {
-    window.print();
-    setShowPrintPreview(false);
+  const confirmPrint = async () => {
+    if (!slipRef.current || isGenerating) return;
+    setIsGenerating(true);
+    
+    try {
+      // Temporarily make the hidden slip visible for capture
+      const printContent = document.getElementById('print-content-wrapper');
+      if (printContent) {
+        printContent.style.opacity = '1';
+        printContent.style.position = 'fixed';
+        printContent.style.left = '0';
+        printContent.style.top = '0';
+        printContent.style.width = '794px';
+        printContent.style.height = 'auto';
+        printContent.style.zIndex = '9999';
+        printContent.style.display = 'block';
+        printContent.style.backgroundColor = 'white';
+        printContent.style.pointerEvents = 'auto';
+      }
+
+      // Wait a bit for layout to stabilize
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      const canvas = await domToCanvas(slipRef.current, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        width: 794,
+        height: slipRef.current.scrollHeight,
+      });
+
+      // Restore hidden state
+      if (printContent) {
+        printContent.style.opacity = '0';
+        printContent.style.position = 'fixed';
+        printContent.style.zIndex = '-50';
+        printContent.style.display = '';
+        printContent.style.pointerEvents = 'none';
+      }
+
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Create a hidden iframe for printing
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Print Receipt - ${customerName || 'Customer'}</title>
+              <style>
+                @page { 
+                  size: A4; 
+                  margin: 0; 
+                }
+                body { 
+                  margin: 0; 
+                  padding: 0; 
+                  display: flex; 
+                  flex-direction: column;
+                  align-items: center; 
+                  background: #fff; 
+                }
+                img { 
+                  width: 210mm; 
+                  height: auto; 
+                  display: block; 
+                }
+                @media print {
+                  body { -webkit-print-color-adjust: exact; }
+                }
+              </style>
+            </head>
+            <body>
+              <img src="${imgData}" />
+              <script>
+                window.onload = () => {
+                  setTimeout(() => {
+                    window.focus();
+                    window.print();
+                    setTimeout(() => {
+                      window.parent.document.body.removeChild(window.frameElement);
+                    }, 1000);
+                  }, 500);
+                };
+              </script>
+            </body>
+          </html>
+        `);
+        doc.close();
+      }
+    } catch (error) {
+      console.error('Print error:', error);
+      alert('Failed to generate print preview. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleDownloadPDF = async () => {
-    if (!slipRef.current) return;
+    if (!slipRef.current || isGenerating) return;
+    setIsGenerating(true);
     try {
-      const canvas = await html2canvas(slipRef.current, {
+      // Temporarily make the hidden slip visible for capture but keep it off-screen
+      const printContent = document.getElementById('print-content-wrapper');
+      if (printContent) {
+        printContent.style.opacity = '1';
+        printContent.style.position = 'fixed';
+        printContent.style.left = '0';
+        printContent.style.top = '0';
+        printContent.style.width = '794px'; // Fixed width for capture
+        printContent.style.height = 'auto';
+        printContent.style.zIndex = '9999';
+        printContent.style.display = 'block';
+        printContent.style.backgroundColor = 'white';
+        printContent.style.pointerEvents = 'auto';
+      }
+
+      // Wait a bit for layout to stabilize
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      const canvas = await domToCanvas(slipRef.current, {
         scale: 2,
-        useCORS: true,
-        logging: false,
         backgroundColor: '#ffffff',
-        windowHeight: slipRef.current.scrollHeight,
-        height: slipRef.current.scrollHeight
+        width: 794,
+        height: slipRef.current.scrollHeight,
       });
+
+      // Restore hidden state
+      if (printContent) {
+        printContent.style.opacity = '0';
+        printContent.style.position = 'fixed';
+        printContent.style.zIndex = '-50';
+        printContent.style.display = '';
+        printContent.style.pointerEvents = 'none';
+      }
+
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       
@@ -520,10 +829,12 @@ export default function App() {
       const xOffset = (pdfWidth - finalWidth) / 2;
       
       pdf.addImage(imgData, 'PNG', xOffset, 0, finalWidth, finalHeight);
-      
-      pdf.save(`EMI_${customerName || 'Customer'}.pdf`);
+      pdf.save(`EMI_${customerName || 'Customer'}_${format(new Date(), 'yyyyMMdd')}.pdf`);
     } catch (error) {
       console.error('PDF Generation Error:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -532,38 +843,24 @@ export default function App() {
       <header className="bg-white border-b border-slate-200 relative">
         <div className="max-w-7xl mx-auto px-4 py-2 sm:h-20 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto overflow-hidden">
-            <label className="cursor-pointer group relative block shrink-0">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#0052CC] rounded-xl flex items-center justify-center text-white overflow-hidden relative shadow-sm group-hover:ring-2 group-hover:ring-blue-400 transition-all">
+            <label htmlFor="header-logo-upload" className="cursor-pointer group relative shrink-0">
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={onLogoUpload}
+                className="hidden" 
+                id="header-logo-upload" 
+              />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200 overflow-hidden group-hover:scale-105 transition-transform relative">
                 {shopLogo ? (
-                  <div className="relative w-full h-full group/logo">
-                    <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" />
-                    <button 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShopLogo(null);
-                        localStorage.removeItem('shopLogo');
-                      }}
-                      className="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-bl-lg opacity-0 group-hover/logo:opacity-100 transition-opacity z-10"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
+                  <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
-                  <div className="relative w-full h-full flex items-center justify-center">
-                    <svg viewBox="0 0 40 40" className="w-10 h-10">
-                      <rect width="40" height="40" rx="8" fill="#0052CC" />
-                      <path d="M12 8H28C29.1046 8 30 8.89543 30 10V30C30 31.1046 29.1046 32 28 32H12C10.8954 32 10 31.1046 10 30V10C10 8.89543 10.8954 8 12 8Z" stroke="#FF8A00" strokeWidth="2" fill="none" />
-                      <path d="M22 28H18" stroke="#FF8A00" strokeWidth="2" strokeLinecap="round" />
-                      <path d="M15 15L20 20L32 8" stroke="#00C853" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-sm" />
-                    </svg>
-                  </div>
+                  <Plus className="w-6 h-6" />
                 )}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <Download className="w-5 h-5 text-white" />
+                  <Upload className="w-4 h-4 text-white" />
                 </div>
               </div>
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setShopLogo)} />
             </label>
             <div className="min-w-0 flex-grow">
               <h1 className="font-black text-base sm:text-xl leading-tight tracking-tight text-slate-900 truncate">{t.shopName}</h1>
@@ -585,12 +882,15 @@ export default function App() {
           </div>
           
           <div className="flex items-center justify-end gap-2 sm:gap-4 shrink-0">
-            {!shopLogo && (
-              <label className="cursor-pointer flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all text-xs font-black uppercase tracking-wider border border-blue-100 shadow-sm">
-                <Download className="w-3.5 h-3.5" />
-                {t.uploadLogo}
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setShopLogo)} />
-              </label>
+            {(isAdmin || isManager) && (
+              <button 
+                onClick={onNavigateAdmin}
+                className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all text-xs sm:text-sm font-bold border border-blue-100 shadow-sm"
+                title={isAdmin ? "Admin Panel" : "User List"}
+              >
+                <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">{isAdmin ? 'Admin' : 'Users'}</span>
+              </button>
             )}
 
             <button 
@@ -599,6 +899,15 @@ export default function App() {
             >
               <Languages className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {lang === 'en' ? 'বাংলা' : 'English'}
+            </button>
+
+            <button 
+              onClick={() => window.location.reload()}
+              className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all text-xs sm:text-sm font-bold border border-red-100 shadow-sm"
+              title="Reset"
+            >
+              <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Reset</span>
             </button>
 
             {deferredPrompt && (
@@ -617,28 +926,6 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Inputs */}
         <div className="lg:col-span-4 space-y-6">
-          {/* Customer Details Section */}
-          <section className="pos-card p-4 sm:p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Info className="w-5 h-5 text-blue-600" />
-              <h2 className="font-bold text-slate-800">{t.customerDetails}</h2>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="pos-label">{t.customerName}</label>
-                <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="pos-input" />
-              </div>
-              <div>
-                <label className="pos-label">{t.customerPhone}</label>
-                <input type="text" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="pos-input" />
-              </div>
-              <div>
-                <label className="pos-label">{t.customerNID}</label>
-                <input type="text" value={customerNID} onChange={(e) => setCustomerNID(e.target.value)} className="pos-input" />
-              </div>
-            </div>
-          </section>
-
           {/* Product Details Section */}
           <section className="pos-card p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-6">
@@ -664,6 +951,11 @@ export default function App() {
               <div>
                 <label className="pos-label">{t.mobileModel}</label>
                 <input type="text" value={mobileModel} onChange={(e) => setMobileModel(e.target.value)} className="pos-input" placeholder="e.g. iPhone 15 Pro" />
+              </div>
+
+              <div>
+                <label className="pos-label">{t.imeiNumber}</label>
+                <input type="text" value={imeiNumber} onChange={(e) => setImeiNumber(e.target.value)} className="pos-input" placeholder="Enter IMEI" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -705,6 +997,32 @@ export default function App() {
                   <span>{t.totalAmount}</span>
                   <span className="font-mono">{(phonePrice > 0 ? phonePrice + serviceCharge + (currentPlanData?.interestAmt || 0) : 0).toLocaleString()} {t.bdt}</span>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Customer Details Section */}
+          <section className="pos-card p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <Info className="w-5 h-5 text-blue-600" />
+              <h2 className="font-bold text-slate-800">{t.customerDetails}</h2>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="pos-label">{t.customerName}</label>
+                <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="pos-input" />
+              </div>
+              <div>
+                <label className="pos-label">{t.customerPhone}</label>
+                <input type="text" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="pos-input" />
+              </div>
+              <div>
+                <label className="pos-label">{t.customerNID}</label>
+                <input type="text" value={customerNID} onChange={(e) => setCustomerNID(e.target.value)} className="pos-input" />
+              </div>
+              <div>
+                <label className="pos-label">{t.customerAddress}</label>
+                <input type="text" value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} className="pos-input" placeholder="Enter Address" />
               </div>
             </div>
           </section>
@@ -954,50 +1272,81 @@ export default function App() {
               exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden"
             >
-              <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Printer className="w-5 h-5 text-blue-600" />
+              <div className="p-3 sm:p-4 border-b border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-slate-50 gap-3 sm:gap-4">
+                <div className="flex items-center justify-between sm:justify-start gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg shrink-0">
+                      <Printer className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm sm:text-lg font-bold text-slate-900 leading-none">{t.previewTitle}</h2>
+                      <p className="hidden sm:block text-xs text-slate-500 font-medium mt-1">{t.previewSubtitle}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900 leading-none">{t.previewTitle}</h2>
-                    <p className="text-xs text-slate-500 font-medium mt-1">{t.previewSubtitle}</p>
-                  </div>
+                  <button 
+                    onClick={() => setShowPrintPreview(false)}
+                    className="sm:hidden p-1.5 hover:bg-slate-200 rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5 text-slate-500" />
+                  </button>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button 
-                    onClick={() => setShowPrintPreview(false)}
-                    className="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-full font-bold hover:bg-slate-200 transition-all active:scale-95"
-                  >
-                    {t.cancel}
-                  </button>
-                  <button 
-                    onClick={handleDownloadPDF}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 text-white rounded-full font-bold hover:bg-slate-900 transition-all shadow-lg shadow-slate-200 active:scale-95"
-                  >
-                    <Download className="w-4 h-4" />
-                    {t.download}
-                  </button>
-                  <button 
-                    onClick={confirmPrint}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95"
-                  >
-                    <Printer className="w-4 h-4" />
-                    {t.printNow}
-                  </button>
-                  <button 
-                    onClick={() => setShowPrintPreview(false)}
-                    className="p-2 hover:bg-slate-200 rounded-full transition-colors ml-2"
-                  >
-                    <X className="w-6 h-6 text-slate-500" />
-                  </button>
+
+                <div className="flex items-center gap-2 sm:gap-3 justify-between sm:justify-end">
+                  <div className="flex items-center gap-1 bg-slate-100 rounded-full px-2 py-1">
+                    <button 
+                      onClick={() => setPreviewScale(prev => Math.max(0.1, prev - 0.05))}
+                      className="p-1 hover:bg-slate-200 rounded-full transition-colors"
+                      title="Zoom Out"
+                    >
+                      <Minus className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-600" />
+                    </button>
+                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-600 w-8 sm:w-10 text-center">{Math.round(previewScale * 100)}%</span>
+                    <button 
+                      onClick={() => setPreviewScale(prev => Math.min(2, prev + 0.05))}
+                      className="p-1 hover:bg-slate-200 rounded-full transition-colors"
+                      title="Zoom In"
+                    >
+                      <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-600" />
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5 sm:gap-3">
+                    <button 
+                      onClick={handleDownloadPDF}
+                      disabled={isGenerating}
+                      className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-slate-800 text-white rounded-full font-bold hover:bg-slate-900 transition-all shadow-lg shadow-slate-200 active:scale-95 text-[10px] sm:text-sm whitespace-nowrap disabled:opacity-50"
+                    >
+                      <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span>{isGenerating ? '...' : t.download}</span>
+                    </button>
+                    <button 
+                      onClick={confirmPrint}
+                      disabled={isGenerating}
+                      className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95 text-[10px] sm:text-sm whitespace-nowrap disabled:opacity-50"
+                    >
+                      <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span>{isGenerating ? '...' : t.printNow}</span>
+                    </button>
+                    <button 
+                      onClick={() => setShowPrintPreview(false)}
+                      className="hidden sm:flex p-2 hover:bg-slate-200 rounded-full transition-colors"
+                    >
+                      <X className="w-6 h-6 text-slate-500" />
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="flex-grow overflow-auto p-2 sm:p-4 md:p-8 bg-slate-100 flex flex-col items-center">
-                <div style={{ width: `${794 * previewScale}px`, minHeight: `${1123 * previewScale}px` }} className="flex justify-center">
-                  <div className="shadow-2xl origin-top-left transition-transform" style={{
-                    width: '210mm',
-                    transform: `scale(${previewScale})`
+              <div className="flex-grow overflow-auto p-4 sm:p-6 md:p-8 bg-slate-100 flex flex-col items-center touch-pan-y">
+                <div style={{ 
+                  width: `${794 * previewScale}px`, 
+                  minHeight: `${1123 * previewScale}px`,
+                  marginBottom: '2rem',
+                  overflow: 'visible'
+                }} className="flex justify-center">
+                  <div className="shadow-2xl origin-top transition-transform" style={{
+                    width: '794px',
+                    transform: `scale(${previewScale})`,
+                    transformOrigin: 'top center'
                   }}>
                     <PrintSlip 
                     shopLogo={shopLogo}
@@ -1011,6 +1360,8 @@ export default function App() {
                     serviceCharge={serviceCharge}
                     currentPlanData={currentPlanData}
                     activePlan={activePlan}
+                    imeiNumber={imeiNumber}
+                    customerAddress={customerAddress}
                   />
                 </div>
               </div>
@@ -1021,8 +1372,8 @@ export default function App() {
     </AnimatePresence>
 
       {/* Hidden Print Slip - Use for PDF and Print */}
-      <div className="fixed opacity-0 pointer-events-none -z-50 top-0 left-0 print-visible">
-        <div id="print-content">
+      <div id="print-content-wrapper" className="fixed opacity-0 pointer-events-none -z-50 top-0 left-0 print-visible overflow-hidden" style={{ width: '210mm', height: '297mm' }}>
+        <div id="print-content" style={{ width: '210mm', minHeight: '297mm' }}>
           <PrintSlip 
             ref={slipRef}
             shopLogo={shopLogo}
@@ -1036,6 +1387,8 @@ export default function App() {
             serviceCharge={serviceCharge}
             currentPlanData={currentPlanData}
             activePlan={activePlan}
+            imeiNumber={imeiNumber}
+            customerAddress={customerAddress}
           />
         </div>
       </div>
@@ -1056,23 +1409,77 @@ export default function App() {
 
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
-          .no-print { display: none !important; }
-          .print-visible { 
-            opacity: 1 !important; 
-            pointer-events: auto !important;
-            position: static !important;
-            z-index: auto !important;
-            display: block !important;
+          .no-print, nav, main, footer, #root > div:not(#print-content-wrapper) { 
+            display: none !important; 
           }
-          #print-content { 
+          #print-content-wrapper {
             display: block !important;
-            width: 210mm;
-            min-height: 297mm;
-            margin: 0 auto;
-            background: white;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 210mm !important;
+            height: auto !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            z-index: 99999 !important;
+            background: white !important;
           }
-          body { background: white !important; margin: 0 !important; padding: 0 !important; }
-          @page { size: A4; margin: 0; }
+          #print-content {
+            width: 210mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
+            background: white !important;
+          }
+          @page {
+            size: A4;
+            margin: 0;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+            background: white !important;
+            -webkit-print-color-adjust: exact;
+          }
+        }
+
+        /* Force hex colors for print slip to avoid oklch errors with html2canvas */
+        #print-content, #print-content * {
+          --color-slate-900: #0f172a !important;
+          --color-slate-800: #1e293b !important;
+          --color-slate-700: #334155 !important;
+          --color-slate-600: #475569 !important;
+          --color-slate-500: #64748b !important;
+          --color-slate-400: #94a3b8 !important;
+          --color-slate-300: #cbd5e1 !important;
+          --color-slate-200: #e2e8f0 !important;
+          --color-slate-100: #f1f5f9 !important;
+          --color-slate-50: #f8fafc !important;
+          --color-gray-300: #d1d5db !important;
+          --color-blue-900: #1e3a8a !important;
+          --color-blue-800: #1e40af !important;
+          --color-blue-700: #1d4ed8 !important;
+          --color-blue-600: #2563eb !important;
+          --color-blue-500: #3b82f6 !important;
+          --color-blue-400: #60a5fa !important;
+          --color-blue-300: #93c5fd !important;
+          --color-blue-200: #bfdbfe !important;
+          --color-blue-100: #dbeafe !important;
+          --color-blue-50: #eff6ff !important;
+          --color-orange-900: #7c2d12 !important;
+          --color-orange-800: #9a3412 !important;
+          --color-orange-700: #c2410c !important;
+          --color-orange-600: #ea580c !important;
+          --color-orange-500: #f97316 !important;
+          --color-orange-400: #fb923c !important;
+          --color-orange-300: #fdba74 !important;
+          --color-orange-200: #fed7aa !important;
+          --color-orange-100: #ffedd5 !important;
+          --color-orange-50: #fff7ed !important;
+          --color-red-600: #dc2626 !important;
+          --color-yellow-400: #facc15 !important;
+          --color-green-600: #16a34a !important;
+          --color-green-500: #22c55e !important;
         }
       `}} />
     </div>
