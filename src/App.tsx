@@ -258,34 +258,34 @@ const SingleSlip = ({
         </div>
 
         {/* Customer & Product Info */}
-        <div className="grid grid-cols-2 gap-12 mb-10">
+        <div className="grid grid-cols-2 gap-8 mb-10">
           <div className="space-y-4">
             <div className="flex justify-center">
               <h3 className="text-xs font-black uppercase border-2 border-slate-900 text-slate-900 px-6 py-1.5 inline-block mb-2">{t.customerDetails}</h3>
             </div>
             <div className="flex gap-4">
-              <div className="space-y-1">
-                <p className="text-sm font-black text-slate-900 uppercase">{t.customerName}</p>
-                <p className="text-lg font-black text-slate-900">{customerName || 'N/A'}</p>
-                <p className="text-sm font-black text-slate-900 uppercase mt-2">{t.customerPhone}</p>
-                <p className="text-md font-bold text-slate-900">{customerPhone || 'N/A'}</p>
-                <p className="text-sm font-black text-slate-900 uppercase mt-2">{t.customerNID}</p>
-                <p className="text-md font-bold text-slate-900">{customerNID || 'N/A'}</p>
-                <p className="text-sm font-black text-slate-900 uppercase mt-2">{t.customerAddress}</p>
-                <p className="text-md font-bold text-slate-900">{customerAddress || 'N/A'}</p>
+              <div className="space-y-2">
+                <p className="text-sm font-black text-slate-900 uppercase whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>{t.customerName}</p>
+                <p className="text-lg font-black text-slate-900 leading-tight">{customerName || 'N/A'}</p>
+                <p className="text-sm font-black text-slate-900 uppercase mt-4 whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>{t.customerPhone}</p>
+                <p className="text-md font-bold text-slate-900 leading-tight">{customerPhone || 'N/A'}</p>
+                <p className="text-sm font-black text-slate-900 uppercase mt-4 whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>{t.customerNID}</p>
+                <p className="text-md font-bold text-slate-900 leading-tight">{customerNID || 'N/A'}</p>
+                <p className="text-sm font-black text-slate-900 uppercase mt-4 whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>{t.customerAddress}</p>
+                <p className="text-md font-bold text-slate-900 leading-tight">{customerAddress || 'N/A'}</p>
               </div>
             </div>
             <div className="mt-4 border-b-4 border-double border-slate-900 w-full"></div>
 
             {/* Summary Box moved here */}
             <div className="mt-6 flex gap-3">
-              <div className="bg-blue-50 p-2 rounded-none border border-blue-200 text-center inline-block min-w-[120px]">
-                <p className="text-[10px] font-black text-blue-600 uppercase mb-0.5 tracking-widest">{t.monthlyEMI}</p>
-                <p className="text-lg font-black text-blue-900 font-mono">{currentPlanData?.monthlyEMI.toLocaleString(undefined, { maximumFractionDigits: 0 })} {t.bdt}</p>
+              <div className="bg-blue-50 p-2 rounded-none border border-blue-200 text-center inline-block min-w-[165px]">
+                <p className="text-[10px] font-black text-blue-600 uppercase mb-1 tracking-wider whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>{t.monthlyEMI}</p>
+                <p className="text-lg font-black text-blue-900 font-mono leading-none">{currentPlanData?.monthlyEMI.toLocaleString(undefined, { maximumFractionDigits: 0 })} {t.bdt}</p>
               </div>
-              <div className="bg-orange-50 p-2 rounded-none border border-orange-200 text-center inline-block min-w-[120px]">
-                <p className="text-[10px] font-black text-orange-600 uppercase mb-0.5 tracking-widest">{t.totalAmount}</p>
-                <p className="text-lg font-black text-orange-900 font-mono">{(phonePrice + serviceCharge + (currentPlanData?.interestAmt || 0)).toLocaleString()} {t.bdt}</p>
+              <div className="bg-orange-50 p-2 rounded-none border border-orange-200 text-center inline-block min-w-[165px]">
+                <p className="text-[10px] font-black text-orange-600 uppercase mb-1 tracking-wider whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>{t.totalAmount}</p>
+                <p className="text-lg font-black text-orange-900 font-mono leading-none">{(currentPlanData?.totalPrice || 0).toLocaleString()} {t.bdt}</p>
               </div>
             </div>
           </div>
@@ -293,38 +293,38 @@ const SingleSlip = ({
             <div className="flex justify-center">
               <h3 className="text-xs font-black uppercase border-2 border-slate-900 text-slate-900 px-6 py-1.5 inline-block mb-2">{t.productDetails}</h3>
             </div>
-            <div className="space-y-2">
-              <div className="flex justify-between border-b border-slate-100 pb-1">
-                <span className="text-[10px] font-black text-slate-900 uppercase">{t.mobileModel}</span>
-                <span className="text-sm font-black text-slate-900">{mobileModel || 'N/A'}</span>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-1 gap-4">
+                <span className="text-[10px] font-black text-slate-900 uppercase shrink-0 whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>{t.mobileModel}</span>
+                <span className="text-sm font-black text-slate-900 text-right">{mobileModel || 'N/A'}</span>
               </div>
-              <div className="flex justify-between border-b border-slate-100 pb-1">
-                <span className="text-[10px] font-black text-slate-900 uppercase">{t.imeiNumber}</span>
-                <span className="text-sm font-black text-slate-900">{imeiNumber || 'N/A'}</span>
+              <div className="flex justify-between items-center border-b border-slate-100 pb-1 gap-4">
+                <span className="text-[10px] font-black text-slate-900 uppercase shrink-0 whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>{t.imeiNumber}</span>
+                <span className="text-sm font-black text-slate-900 text-right">{imeiNumber || 'N/A'}</span>
               </div>
-              <div className="flex justify-between border-b border-slate-100 pb-1">
-                <span className="text-[10px] font-black text-slate-900 uppercase">{t.phonePrice}</span>
-                <span className="text-sm font-black text-slate-900 font-mono">{phonePrice.toLocaleString()} {t.bdt}</span>
+              <div className="flex justify-between items-center border-b border-slate-100 pb-1 gap-4">
+                <span className="text-[10px] font-black text-slate-900 uppercase shrink-0 whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>{t.phonePrice}</span>
+                <span className="text-sm font-black text-slate-900 font-mono text-right">{phonePrice.toLocaleString()} {t.bdt}</span>
               </div>
-              <div className="flex justify-between border-b border-slate-100 pb-1">
-                <span className="text-[10px] font-black text-slate-900 uppercase">{t.serviceCharge}</span>
-                <span className="text-sm font-black text-slate-900 font-mono">{serviceCharge.toLocaleString()} {t.bdt}</span>
+              <div className="flex justify-between items-center border-b border-slate-100 pb-1 gap-4">
+                <span className="text-[10px] font-black text-slate-900 uppercase shrink-0 whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>{t.serviceCharge}</span>
+                <span className="text-sm font-black text-slate-900 font-mono text-right">{serviceCharge.toLocaleString()} {t.bdt}</span>
               </div>
-              <div className="flex justify-between border-b border-slate-100 pb-1">
-                <span className="text-[10px] font-black text-slate-900 uppercase">{t.interestAmt} ({currentPlanData?.interestRate}%)</span>
-                <span className="text-sm font-black text-slate-900 font-mono">+{currentPlanData?.interestAmt.toLocaleString()} {t.bdt}</span>
+              <div className="flex justify-between items-center border-b border-slate-100 pb-1 gap-4">
+                <span className="text-[10px] font-black text-slate-900 uppercase shrink-0 whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>{t.interestAmt} ({currentPlanData?.interestRate}%)</span>
+                <span className="text-sm font-black text-slate-900 font-mono text-right">+{currentPlanData?.interestAmt.toLocaleString()} {t.bdt}</span>
               </div>
-              <div className="flex justify-between border-b-2 border-slate-900 pb-1 pt-1 bg-slate-50 px-1">
-                <span className="text-[10px] font-black text-slate-900 uppercase">Subtotal (Price + S.C + Int.)</span>
-                <span className="text-sm font-black text-slate-900 font-mono">{(phonePrice + serviceCharge + (currentPlanData?.interestAmt || 0)).toLocaleString()} {t.bdt}</span>
+              <div className="flex justify-between items-center border-b-2 border-slate-900 pb-1 pt-1 bg-slate-50 px-1 gap-4">
+                <span className="text-[10px] font-black text-slate-900 uppercase shrink-0 whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>Subtotal (Price + S.C + Int.)</span>
+                <span className="text-sm font-black text-slate-900 font-mono text-right">{(currentPlanData?.totalPrice || 0).toLocaleString()} {t.bdt}</span>
               </div>
-              <div className="flex justify-between border-b border-slate-100 pb-1 pt-2">
-                <span className="text-[10px] font-black text-slate-900 uppercase">{t.downPaymentAmt} ({currentPlanData?.dpPct}%)</span>
-                <span className="text-sm font-black text-red-600 font-mono">-{currentPlanData?.dpAmount.toLocaleString()} {t.bdt}</span>
+              <div className="flex justify-between items-center border-b border-slate-100 pb-1 pt-2 gap-4">
+                <span className="text-[10px] font-black text-slate-900 uppercase shrink-0 whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>{t.downPaymentAmt} ({currentPlanData?.dpPct}%)</span>
+                <span className="text-sm font-black text-red-600 font-mono text-right">-{currentPlanData?.dpAmount.toLocaleString()} {t.bdt}</span>
               </div>
-              <div className="flex justify-between border-b-2 border-slate-900 pb-1 pt-1 bg-slate-50 px-1">
-                <span className="text-[10px] font-black text-slate-900 uppercase">Remaining / Payable Balance</span>
-                <span className="text-sm font-black text-slate-900 font-mono">{(phonePrice + serviceCharge + (currentPlanData?.interestAmt || 0) - (currentPlanData?.dpAmount || 0)).toLocaleString()} {t.bdt}</span>
+              <div className="flex justify-between items-center border-b-2 border-slate-900 pb-1 pt-1 bg-slate-50 px-1 gap-4">
+                <span className="text-[10px] font-black text-slate-900 uppercase shrink-0 whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>Remaining / Payable Balance</span>
+                <span className="text-sm font-black text-slate-900 font-mono text-right">{(currentPlanData?.payableAmount || 0).toLocaleString()} {t.bdt}</span>
               </div>
             </div>
           </div>
@@ -356,7 +356,7 @@ const SingleSlip = ({
             <tfoot>
               <tr className="bg-slate-900 text-white">
                 <td colSpan={2} className="py-4 px-4 font-black uppercase text-right">{t.totalPayable}</td>
-                <td className="py-4 px-4 text-right font-mono font-black text-xl">{currentPlanData?.finalPayable.toLocaleString()} {t.bdt}</td>
+                <td className="py-4 px-4 text-right font-mono font-black text-xl">{currentPlanData?.payableAmount.toLocaleString()} {t.bdt}</td>
               </tr>
             </tfoot>
           </table>
@@ -626,14 +626,13 @@ function Dashboard({
 
   // Calculations
   const calculations = useMemo(() => {
-    const total = phonePrice > 0 ? phonePrice + serviceCharge : 0;
-    const dpAmount = total * (dpPct / 100);
-    const remaining = total - dpAmount;
+    const baseAmount = phonePrice > 0 ? phonePrice + serviceCharge : 0;
 
     return PLANS.map(plan => {
-      const interestAmt = remaining * (plan.interestRate / 100);
-      const finalPayable = remaining + interestAmt;
-      const monthlyEMI = finalPayable / plan.months;
+      const totalPrice = baseAmount + (baseAmount * (plan.interestRate / 100));
+      const dpAmount = totalPrice * (dpPct / 100);
+      const payableAmount = totalPrice - dpAmount;
+      const monthlyEMI = payableAmount / plan.months;
 
       const schedule = Array.from({ length: plan.months }).map((_, i) => ({
         index: i + 1,
@@ -643,17 +642,17 @@ function Dashboard({
 
       return {
         ...plan,
-        interestAmt,
-        finalPayable,
-        monthlyEMI,
-        schedule,
-        total,
+        baseAmount,
+        totalPrice,
         dpAmount,
         dpPct,
-        remaining
+        payableAmount,
+        monthlyEMI,
+        schedule,
+        interestAmt: baseAmount * (plan.interestRate / 100)
       };
     });
-  }, [phonePrice, dpPct, purchaseDate]);
+  }, [phonePrice, serviceCharge, dpPct, purchaseDate]);
 
   const currentPlanData = calculations.find(p => p.months === activePlan);
 
@@ -995,7 +994,7 @@ function Dashboard({
               <div className="pt-2 space-y-2">
                 <div className="flex justify-between text-base font-bold text-blue-600">
                   <span>{t.totalAmount}</span>
-                  <span className="font-mono">{(phonePrice > 0 ? phonePrice + serviceCharge + (currentPlanData?.interestAmt || 0) : 0).toLocaleString()} {t.bdt}</span>
+                  <span className="font-mono">{(currentPlanData?.totalPrice || 0).toLocaleString()} {t.bdt}</span>
                 </div>
               </div>
             </div>
@@ -1163,9 +1162,9 @@ function Dashboard({
                     {/* Main Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                       <StatCard label={t.downPaymentAmt} value={currentPlanData.dpAmount} subValue={`${dpPct}%`} />
-                      <StatCard label={t.remainingAmt} value={currentPlanData.remaining} />
+                      <StatCard label={t.remainingAmt} value={currentPlanData.payableAmount} />
                       <StatCard label={t.interestAmt} value={currentPlanData.interestAmt} subValue={`${currentPlanData.interestRate}%`} />
-                      <StatCard label={t.totalAmount} value={phonePrice + serviceCharge + currentPlanData.interestAmt} variant="orange" />
+                      <StatCard label={t.totalAmount} value={currentPlanData.totalPrice} variant="orange" />
                       <StatCard label={t.monthlyEMI} value={currentPlanData.monthlyEMI} variant="blue" />
                     </div>
 
@@ -1177,7 +1176,7 @@ function Dashboard({
                           {t.schedule}
                         </h3>
                         <div className="text-xs font-bold text-slate-500">
-                          {t.totalPayable}: <span className="text-blue-600 font-mono text-sm">{currentPlanData.finalPayable.toLocaleString()} {t.bdt}</span>
+                          {t.totalPayable}: <span className="text-blue-600 font-mono text-sm">{currentPlanData.payableAmount.toLocaleString()} {t.bdt}</span>
                         </div>
                       </div>
                       <div className="overflow-x-auto">
