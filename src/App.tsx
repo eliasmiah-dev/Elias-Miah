@@ -51,6 +51,11 @@ const PLANS: PlanConfig[] = [
   { months: 6, interestRate: 30 },
 ];
 
+const SHOP_ADDRESSES = {
+  shop1: "Johir & Suraiya Complex, Down of islami Bank ltd. Gobindajang, Gaibandha.",
+  shop2: "Banesshor Bazar, Gobindaganj, Gaibandha."
+};
+
 const SERVICE_CHARGE = 300;
 
 // --- Translations ---
@@ -112,6 +117,9 @@ const translations = {
     installApp: "Install App",
     imeiNumber: "IMEI Number",
     customerAddress: "Customer Address",
+    selectShop: "Select Shop Branch",
+    shop1: "Shop - 1 (Gobindaganj)",
+    shop2: "Shop - 2 (Banesshor)",
   },
   bn: {
     title: "Phone Future - EMI System",
@@ -169,6 +177,9 @@ const translations = {
     installApp: "অ্যাপ ইনস্টল করুন",
     imeiNumber: "আইএমইআই নম্বর",
     customerAddress: "গ্রাহকের ঠিকানা",
+    selectShop: "দোকান শাখা নির্বাচন করুন",
+    shop1: "শাখা - ১ (গোবিন্দগঞ্জ)",
+    shop2: "শাখা - ২ (বনেশ্বর)",
   }
 };
 
@@ -188,6 +199,7 @@ interface PrintSlipProps {
   activePlan: number;
   imeiNumber: string;
   customerAddress: string;
+  selectedShop: 'shop1' | 'shop2';
 }
 
 const SingleSlip = ({ 
@@ -203,7 +215,8 @@ const SingleSlip = ({
   currentPlanData, 
   activePlan,
   imeiNumber,
-  customerAddress
+  customerAddress,
+  selectedShop
 }: Omit<PrintSlipProps, 'ref'>) => (
   <div className="flex flex-col bg-white min-h-[1123px] p-6">
     <div className="border-8 border-double border-slate-900 p-8 flex-grow flex flex-col relative">
@@ -235,18 +248,18 @@ const SingleSlip = ({
               )}
             </div>
             <div>
-              <h1 className="text-5xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-1">Phone Future</h1>
+              <h1 className="text-5xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-1 whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>Phone Future</h1>
               <div className="flex flex-col">
                 <p className="text-sm font-black text-slate-800 italic leading-tight">Take your Dream</p>
                 <p className="text-xs font-black text-slate-900 inline-block border-b-4 border-yellow-400 pb-0.5 leading-tight w-fit">Buy/Sell/Exchange</p>
                 <div className="flex flex-col mt-0.5">
                   <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-700 leading-none">
                     <Phone className="w-3 h-3 text-blue-600" />
-                    <span>+8801886-038800, +8801713-831446</span>
+                    <span className="whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>+8801886-038800, +8801713-831446</span>
                   </div>
-                  <div className="flex items-start gap-1.5 text-[10px] font-black text-slate-700 leading-tight mt-0.5">
+                  <div className="flex items-start gap-1.5 text-[10px] font-black text-slate-700 leading-tight mt-0.5 whitespace-nowrap" style={{ whiteSpace: 'nowrap' }}>
                     <MapPin className="w-3 h-3 text-red-600 shrink-0 mt-0.5" />
-                    <span>Johir & Suraiya Complex, Down of islami Bank ltd. Gobindajang, Gaibandha.</span>
+                    <span>{SHOP_ADDRESSES[selectedShop]}</span>
                   </div>
                 </div>
               </div>
@@ -593,6 +606,7 @@ function Dashboard({
   const [reminderStatus, setReminderStatus] = useState<'idle' | 'success'>('idle');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [previewScale, setPreviewScale] = useState(1);
+  const [selectedShop, setSelectedShop] = useState<'shop1' | 'shop2'>('shop1');
 
   useEffect(() => {
     const updateScale = () => {
@@ -862,18 +876,18 @@ function Dashboard({
               </div>
             </label>
             <div className="min-w-0 flex-grow">
-              <h1 className="font-black text-base sm:text-xl leading-tight tracking-tight text-slate-900 truncate">{t.shopName}</h1>
+              <h1 className="font-black text-base sm:text-xl leading-tight tracking-tight text-slate-900 whitespace-nowrap">{t.shopName}</h1>
               <div className="flex flex-col">
                 <p className="text-[9px] sm:text-[11px] font-black text-slate-800 italic leading-tight">Take your Dream</p>
                 <p className="text-[8px] sm:text-[10px] font-black text-slate-900 inline-block border-b-2 border-yellow-400 pb-0.5 leading-tight w-fit">Buy/Sell/Exchange</p>
                 <div className="hidden sm:flex flex-col mt-0.5">
                   <div className="flex items-center gap-1 sm:gap-1.5 text-[8px] sm:text-[9px] font-black text-slate-700 leading-none">
                     <Phone className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-blue-600" />
-                    <span className="break-words">+8801886-038800, +8801713-831446</span>
+                    <span className="whitespace-nowrap">+8801886-038800, +8801713-831446</span>
                   </div>
                   <div className="flex items-start gap-1 sm:gap-1.5 text-[8px] sm:text-[9px] font-black text-slate-700 leading-tight mt-0.5">
                     <MapPin className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-red-600 shrink-0 mt-0.5" />
-                    <span className="break-words">Johir & Suraiya Complex, Down of islami Bank ltd. Gobindajang, Gaibandha.</span>
+                    <span className="whitespace-nowrap">{SHOP_ADDRESSES[selectedShop]}</span>
                   </div>
                 </div>
               </div>
@@ -927,9 +941,31 @@ function Dashboard({
         <div className="lg:col-span-4 space-y-6">
           {/* Product Details Section */}
           <section className="pos-card p-4 sm:p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Smartphone className="w-5 h-5 text-blue-600" />
-              <h2 className="font-bold text-slate-800">{t.productDetails}</h2>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-blue-600" />
+                <h2 className="font-bold text-slate-800">{t.productDetails}</h2>
+              </div>
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+                <button 
+                  onClick={() => setSelectedShop('shop1')}
+                  className={cn(
+                    "px-2 py-1 text-[10px] font-bold rounded-md transition-all",
+                    selectedShop === 'shop1' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  )}
+                >
+                  Shop 1
+                </button>
+                <button 
+                  onClick={() => setSelectedShop('shop2')}
+                  className={cn(
+                    "px-2 py-1 text-[10px] font-bold rounded-md transition-all",
+                    selectedShop === 'shop2' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  )}
+                >
+                  Shop 2
+                </button>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -1361,6 +1397,7 @@ function Dashboard({
                     activePlan={activePlan}
                     imeiNumber={imeiNumber}
                     customerAddress={customerAddress}
+                    selectedShop={selectedShop}
                   />
                 </div>
               </div>
@@ -1388,6 +1425,7 @@ function Dashboard({
             activePlan={activePlan}
             imeiNumber={imeiNumber}
             customerAddress={customerAddress}
+            selectedShop={selectedShop}
           />
         </div>
       </div>
